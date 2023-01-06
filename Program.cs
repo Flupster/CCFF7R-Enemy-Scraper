@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.IO;
 
 namespace CC7RSCRAPE
 {
@@ -31,21 +32,29 @@ namespace CC7RSCRAPE
 
         static void Main(string[] args)
         {
+            string filename = "CCFF7R-scrape-" + DateTime.Now.ToString("MM-dd-HH-mm") + ".csv";
+            File.Create(filename).Close();
+
             Process process = Process.GetProcessesByName("CCFF7R-Win64-Shipping")[0];
             IntPtr processHandle = OpenProcess(PROCESS_WM_READ, false, process.Id);
             Int32 processHandleID = (int)processHandle;
 
             var seen = new List<int>();
-            while (true)
+            using (StreamWriter sw = File.AppendText(filename))
             {
-                for (int i = 0; i < 7; i++)
+                while (true)
                 {
-
-                    (Enemy enemy, bool success) = MemoryManager.read(process, processHandleID, 0x07194F38 + (i * 0x0740));
-                    if (success && !seen.Contains(enemy.ID))
+                    for (int i = 0; i < 7; i++)
                     {
-                        seen.Add(enemy.ID);
-                        Console.WriteLine(enemy.ToString());
+
+                        (Enemy enemy, bool success) = MemoryManager.read(process, processHandleID, 0x07194F38 + (i * 0x0740));
+                        if (success && !seen.Contains(enemy.ID))
+                        {
+                            seen.Add(enemy.ID);
+                            sw.WriteLine(enemy.ToString());
+                            sw.Flush();
+                            Console.WriteLine(enemy.ToString());
+                        }
                     }
                 }
             }
@@ -69,7 +78,7 @@ namespace CC7RSCRAPE
             enemy.MaxAP = BitConverter.ToInt32(buffer, 260);
             enemy.Unknown1 = BitConverter.ToInt32(buffer, 264);
             enemy.Unknown2 = BitConverter.ToInt32(buffer, 268);
-            if(enemy.ID == 0) { return (new Enemy(), false); }
+            if (enemy.ID == 0) { return (new Enemy(), false); }
             return (enemy, true);
         }
     }
